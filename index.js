@@ -93,20 +93,21 @@ async function loopForAllFiles(req){
     let data = [];
 
     //loop all files
-     _.forEach(_.keysIn(req.files.files), async (key) => {
-        let photo = req.files.files[key];
+     // _.forEach(_.keysIn(req.files.files), async (key) => {
+     for(var i=0;i<req.files.files.length;i++){
+        let photo = req.files.files[i];
 
         //move photo to uploads directory
         let path = './uploads/' + photo.name;
         await photo.mv(path);
         await uploadFilesInS3Bucket(path);
         //push file details
-        data.push({
+        await data.push({
             name: photo.name,
             mimetype: photo.mimetype,
             size: photo.size
         });
-    });
+    }
     return data;
 }
 
