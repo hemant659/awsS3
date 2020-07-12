@@ -34,7 +34,7 @@ app.listen(port, () =>
   console.log(`App is listening on port ${port}.`)
 );
 
-app.post('/upload-avatar', async (req, res) => {
+app.post('/uploadFile', async (req, res) => {
     try {
         if(!req.files) {
             res.send({
@@ -42,22 +42,22 @@ app.post('/upload-avatar', async (req, res) => {
                 message: 'No file uploaded'
             });
         } else {
-            //Use the name of the input field (i.e. "avatar") to retrieve the uploaded file
-            let avatar = req.files.avatar;
-            let path = './uploads/' + avatar.name;
-            console.log(avatar.name);
-            console.log(avatar.size);
+            //Use the name of the input field (i.e. "file") to retrieve the uploaded file
+            let file = req.files.file;
+            let path = './uploads/' + file.name;
+            console.log(file.name);
+            console.log(file.size);
 
-            avatar.mv(path);
+            file.mv(path);
             await uploadFilesInS3Bucket(path);
 
             res.send({
                 status: true,
                 message: 'File is uploaded',
                 data: {
-                    name: avatar.name,
-                    mimetype: avatar.mimetype,
-                    size: avatar.size
+                    name: file.name,
+                    mimetype: file.mimetype,
+                    size: file.size
                 }
             });
         }
@@ -65,6 +65,50 @@ app.post('/upload-avatar', async (req, res) => {
         res.status(500).send(err);
     }
 });
+
+app.post('/uploadMultipleFiles', async (req, res) => {
+    try {
+        if(!req.files) {
+            res.send({
+                status: false,
+                message: 'No file uploaded'
+            });
+        } else {
+
+            let data = await loopForAllFiles(req);
+            console.log('Files are uploaded');
+            //return response
+            res.send({
+                status: true,
+                message: 'Files are uploaded',
+                data: data
+            });
+        }
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+async function loopForAllFiles(req){
+    let data = [];
+
+    //loop all files
+     _.forEach(_.keysIn(req.files.files), async (key) => {
+        let photo = req.files.files[key];
+
+        //move photo to uploads directory
+        let path = './uploads/' + photo.name;
+        await photo.mv(path);
+        await uploadFilesInS3Bucket(path);
+        //push file details
+        data.push({
+            name: photo.name,
+            mimetype: photo.mimetype,
+            size: photo.size
+        });
+    });
+    return data;
+}
 
 async function uploadFilesInS3Bucket(file){
     var uploadParams = {Bucket: 'bucketnummerzwei', Key: '', Body: ''};
